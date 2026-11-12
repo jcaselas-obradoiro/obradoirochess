@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ajedrez Interactivo: Escuela, Valores y Sumas</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card: #131b2e;
+      --border: #1e293b;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #f59e0b;
+      --accent-hover: #d97706;
+      --light-sq: #ece9d8;
+      --dark-sq: #769656;
+      --success: #10b981;
+      --error: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 16px; line-height: 1.5; }
+    .container { max-width: 1040px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    h1 { font-size: 24px; color: #f8fafc; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .subtitle { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+    .badge { display: inline-block; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: var(--accent); padding: 2px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; margin-top: 6px; }
+    
+    .nav-tabs { display: flex; gap: 8px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
+    .tab-btn { padding: 9px 16px; border-radius: 10px; border: 1px solid var(--border); background: #182238; color: #cbd5e1; cursor: pointer; font-weight: bold; font-size: 13px; transition: all 0.15s; }
+    .tab-btn:hover { background: #1e293b; color: white; }
+    .tab-btn.active { background: var(--accent); color: #0f172a; border-color: var(--accent); }
+    
+    .section-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+    .card-title { font-size: 18px; font-weight: bold; color: #f8fafc; margin-bottom: 4px; }
+    .card-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+
+    .split-layout { display: grid; grid-template-columns: 1fr; gap: 20px; }
+    @media(min-width: 820px) { .split-layout { grid-template-columns: 1.1fr 0.9fr; } }
+
+    .board-wrap { display: flex; flex-direction: column; align-items: center; }
+    .board { width: 360px; height: 360px; max-width: 100%; aspect-ratio: 1/1; display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); border: 4px solid #334155; border-radius: 10px; overflow: hidden; box-shadow: 0 8px 20px rgba(0,0,0,0.4); }
+    .sq { display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; user-select: none; position: relative; }
+    .sq.light { background: var(--light-sq); color: #1e293b; }
+    .sq.dark { background: var(--dark-sq); color: #f8fafc; }
+    .sq.move-hint::after { content: ''; width: 12px; height: 12px; background: rgba(16, 185, 129, 0.8); border-radius: 50%; position: absolute; }
+    .sq.capture-hint { box-shadow: inset 0 0 0 4px #ef4444; }
+    .sq.correct-hint { background: rgba(16, 185, 129, 0.5) !important; }
+    .sq.wrong-hint { background: rgba(239, 68, 68, 0.4) !important; }
+
+    .piece-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 14px; }
+    @media(min-width: 500px) { .piece-selector { grid-template-columns: repeat(6, 1fr); } }
+    .p-btn { display: flex; flex-direction: column; align-items: center; padding: 8px 4px; background: #1e293b; border: 1px solid var(--border); color: #e2e8f0; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: bold; transition: all 0.15s; }
+    .p-btn span.sym { font-size: 22px; margin-bottom: 2px; }
+    .p-btn span.val { font-size: 10px; color: var(--accent); }
+    .p-btn.active { background: rgba(245, 158, 11, 0.2); border-color: var(--accent); color: #fbbf24; }
+
+    .controls-bar { display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+    .btn { padding: 8px 16px; background: var(--accent); color: #0f172a; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; transition: background 0.15s; }
+    .btn:hover { background: var(--accent-hover); }
+    .btn-secondary { background: #334155; color: #f8fafc; }
+    .btn-secondary:hover { background: #475569; }
+
+    .feedback-banner { margin-top: 14px; padding: 12px; border-radius: 10px; font-size: 13px; text-align: center; font-weight: 500; display: none; }
+    .feedback-banner.success { display: block; background: rgba(16, 185, 129, 0.15); border: 1px solid var(--success); color: #6ee7b7; }
+    .feedback-banner.error { display: block; background: rgba(239, 68, 68, 0.15); border: 1px solid var(--error); color: #fca5a5; }
+
+    .stat-box { background: #0c1222; border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-top: 10px; }
+    .input-field { width: 100%; padding: 8px 12px; background: #1e293b; border: 1px solid var(--border); border-radius: 8px; color: white; font-size: 16px; font-weight: bold; }
+    
+    .card-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 480px; margin: 0 auto; }
+    .memory-card { height: 85px; background: #1e293b; border: 1px solid var(--border); border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; font-size: 24px; transition: transform 0.2s; user-select: none; }
+    .memory-card:hover { transform: scale(1.02); }
+    .memory-card.revealed { background: #334155; border-color: var(--accent); }
+    .memory-card.matched { background: rgba(16, 185, 129, 0.25); border-color: var(--success); opacity: 0.8; pointer-events: none; }
+    
+    .info-box { background: #0c1222; border: 1px solid var(--border); border-radius: 10px; padding: 12px; font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
+    .info-box strong { color: #f8fafc; font-size: 13px; display: block; margin-bottom: 2px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1><span>♞</span> Ajedrez Interactivo: Escuela y Juegos</h1>
+      <p class="subtitle">Valores oficiales FIDE · Movimientos interactivos · Sumas en tablero · Memoria</p>
+      <div class="badge">Operativo 100% Autónomo (HTML5 + CSS + JavaScript)</div>
+    </header>
+
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="setTab('explorador')">1. Valores y Movimientos</button>
+      <button class="tab-btn" onclick="setTab('sumas')">2. Entrenamiento: Suma de Piezas</button>
+      <button class="tab-btn" onclick="setTab('memoria_pos')">3. Memoria: Posiciones de Tablero</button>
+      <button class="tab-btn" onclick="setTab('memory_cards')">4. Memory de Cartas y Valores</button>
+    </div>
+
+    <!-- PESTAÑA 1: EXPLORADOR DE VALORES Y MOVIMIENTOS -->
+    <div id="tab-explorador" class="section-card">
+      <div class="card-title">Valores de las Piezas y Demostrador de Movimiento</div>
+      <div class="card-desc">Haz clic en cualquier pieza para ver su valor FIDE, regla de oro y prueba su movimiento haciendo clic en las casillas marcadas.</div>
+      
+      <div class="piece-selector" id="piece-selector"></div>
+
+      <div class="split-layout">
+        <div class="board-wrap">
+          <div id="demo-board" class="board"></div>
+          <div class="controls-bar">
+            <button class="btn btn-secondary" onclick="resetDemoPiece()">Centrar Pieza</button>
+            <button class="btn btn-secondary" onclick="toggleDemoEnemies()" id="btn-enemies">Rivales: Sí</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="info-box" id="piece-info-box"></div>
+          <div class="stat-box">
+            <strong style="color: var(--accent); font-size: 13px; display:block; margin-bottom: 6px;">Equivalencias de Material:</strong>
+            <ul id="equivalences-list" style="padding-left: 18px; font-size: 12px; color: #cbd5e1; line-height: 1.6;"></ul>
+          </div>
+          <div class="stat-box" style="margin-top: 10px;">
+            <strong style="color: #60a5fa; font-size: 13px; display:block; margin-bottom: 4px;">Reglas Especiales:</strong>
+            <p id="special-rules-text" style="font-size: 12px; color: #94a3b8;"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PESTAÑA 2: SUMA DE PIEZAS EN TABLERO -->
+    <div id="tab-sumas" class="section-card" style="display: none;">
+      <div class="card-title">Entrenamiento: Suma de Piezas (Blancas y Negras)</div>
+      <div class="card-desc">Calcula el valor numérico total de las piezas de cada bando en la posición del tablero.</div>
+
+      <div class="split-layout">
+        <div class="board-wrap">
+          <div id="sums-board" class="board"></div>
+          <div class="controls-bar">
+            <button class="btn btn-secondary" onclick="generateNewSumBoard()">Generar Nuevo Tablero</button>
+            <button class="btn btn-secondary" onclick="toggleSumHints()" id="btn-sum-hints">Ver Pistas (+)</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="stat-box">
+            <strong style="color: #f8fafc; margin-bottom: 6px;">Valores FIDE Oficiales:</strong>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 12px; text-align: center; margin-top: 6px;">
+              <div style="background:#1e293b; padding:4px; border-radius:6px;">♙ Peón: <strong>1 pt</strong></div>
+              <div style="background:#1e293b; padding:4px; border-radius:6px;">♘ Caballo: <strong>3 pts</strong></div>
+              <div style="background:#1e293b; padding:4px; border-radius:6px;">♗ Alfil: <strong>3 pts</strong></div>
+              <div style="background:#1e293b; padding:4px; border-radius:6px;">♖ Torre: <strong>5 pts</strong></div>
+              <div style="background:#1e293b; padding:4px; border-radius:6px;">♕ Dama: <strong>9 pts</strong></div>
+              <div style="background:#1e293b; padding:4px; border-radius:6px;">♔ Rey: <strong>∞ (0 pts)</strong></div>
+            </div>
+          </div>
+
+          <div class="stat-box" style="margin-top: 14px;">
+            <label style="display:block; font-size:13px; font-weight:bold; margin-bottom:4px;">
+              Total Piezas Blancas:
+            </label>
+            <input id="input-white-sum" type="number" class="input-field" placeholder="Puntos de blancas..." />
+
+            <label style="display:block; font-size:13px; font-weight:bold; margin-top:12px; margin-bottom:4px;">
+              Total Piezas Negras:
+            </label>
+            <input id="input-black-sum" type="number" class="input-field" placeholder="Puntos de negras..." />
+
+            <button class="btn" style="width: 100%; margin-top: 14px; padding: 10px;" onclick="checkBoardSum()">
+              Comprobar Suma del Tablero
+            </button>
+          </div>
+
+          <div id="sums-feedback" class="feedback-banner"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PESTAÑA 3: MEMORIA DE POSICIONES EN TABLERO -->
+    <div id="tab-memoria_pos" class="section-card" style="display: none;">
+      <div class="card-title">Memoria: Recordar Posición de Piezas</div>
+      <div class="card-desc">Observa el tablero durante 5 segundos. Las piezas desaparecerán y deberás recolocarlas en sus casillas correctas.</div>
+
+      <div class="split-layout">
+        <div class="board-wrap">
+          <div id="memo-pos-board" class="board"></div>
+          <div class="controls-bar">
+            <button class="btn" onclick="startMemoryPositionRound()">Iniciar Ronda de Memoria</button>
+            <button class="btn btn-secondary" onclick="forceHideMemoryPieces()" id="btn-memo-ready" style="display:none;">¡Ya lo memoricé!</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="stat-box" id="memo-phase-status">
+            <strong>Estado:</strong> Haz clic en "Iniciar Ronda de Memoria" para empezar.
+          </div>
+
+          <div class="stat-box" style="margin-top: 12px;">
+            <strong style="margin-bottom: 6px; display:block;">Piezas para Reconstruir:</strong>
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">
+              Selecciona una pieza y luego haz clic en el tablero donde estaba:
+            </p>
+            <div id="memo-tray" style="display: flex; gap: 8px; flex-wrap: wrap; min-height: 50px;"></div>
+
+            <button class="btn" id="btn-check-memory" style="width: 100%; margin-top: 12px; display: none;" onclick="checkMemoryPositions()">
+              Verificar Posiciones
+            </button>
+          </div>
+
+          <div id="memo-feedback" class="feedback-banner"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PESTAÑA 4: MEMORY DE CARTAS -->
+    <div id="tab-memory_cards" class="section-card" style="display: none;">
+      <div class="card-title">Memory de Cartas: Emparejar Piezas y Valores</div>
+      <div class="card-desc">Encuentra las parejas de cartas volteándolas de dos en dos.</div>
+      
+      <div class="card-grid" id="memory-cards-grid"></div>
+
+      <div class="controls-bar" style="margin-top: 16px;">
+        <button class="btn btn-secondary" onclick="initMemoryCards()">Nuevo Juego</button>
+      </div>
+      <div id="card-feedback" class="feedback-banner"></div>
+    </div>
+  </div>
+
+  <script>
+    let audioCtx = null;
+    function playBeep(freq, dur=0.1, type='sine') {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + dur);
+      } catch(e) {}
+    }
+
+    const PIECES_DATA = {
+      pawn: { name: 'Peón', symbol: '♙', val: 1, valText: '1 punto', mnemonic: 'Camina de frente, come de lado, ¡y sueña con coronar!', equiv: ['3 Peones = 1 Caballo o Alfil', '5 Peones = 1 Torre', '9 Peones = 1 Dama'], special: 'En su 1er movimiento avanza 1 o 2 casillas. Captura al paso (en passant) y coronación al llegar a la última fila.' },
+      knight: { name: 'Caballo', symbol: '♘', val: 3, valText: '3 puntos', mnemonic: 'Dos pasos al frente y uno al costado (en "L"). ¡Salta sobre todo!', equiv: ['1 Caballo = 3 Peones', '1 Caballo = 1 Alfil (ambas piezas menores)', '2 Caballos ≈ 1 Torre + 1 Peón'], special: 'Única pieza que salta sobre otras piezas. Siempre cambia de color de casilla en cada salto.' },
+      bishop: { name: 'Alfil', symbol: '♗', val: 3, valText: '3 puntos', mnemonic: 'Vuela por las diagonales sin límite, fiel a su color.', equiv: ['1 Alfil = 3 Peones', '1 Alfil = 1 Caballo', 'Pareja de Alfiles domina finales abiertos'], special: 'Nunca puede cambiar de color de casilla (uno viaja por casillas blancas y el otro por negras).' },
+      rook: { name: 'Torre', symbol: '♖', val: 5, valText: '5 puntos', mnemonic: 'Firme en cruz (+), avanza en vertical y horizontal con poder.', equiv: ['1 Torre = 5 Peones', '1 Torre ≈ 1 Alfil + 2 Peones', '2 Torres = 10 pts (> 1 Dama de 9 pts)'], special: 'Pieza mayor. Participa en el enroque con el Rey para protegerlo y activar la torre.' },
+      queen: { name: 'Dama', symbol: '♕', val: 9, valText: '9 puntos', mnemonic: 'Reina del tablero: avanza en cruz y en diagonal a cualquier distancia.', equiv: ['1 Dama = 9 Peones', '1 Dama = 3 Piezas Menores', '1 Dama ≈ 1 Torre + 1 Caballo + 1 Peón'], special: 'La pieza de ataque más poderosa. Combina la fuerza de la Torre y el Alfil.' },
+      king: { name: 'Rey', symbol: '♔', val: 99, valText: 'Invaluable (∞)', mnemonic: 'Paso a paso en cualquier dirección. ¡Protégelo porque es la partida!', equiv: ['No tiene valor de canje: su pérdida significa el jaque mate y fin de la partida.'], special: 'Nunca puede ponerse a sí mismo en jaque. Realiza el enroque (corto o largo) con la torre.' }
+    };
+
+    function setTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.section-card').forEach(s => s.style.display = 'none');
+      document.getElementById('tab-' + tabId).style.display = 'block';
+      event.target.classList.add('active');
+      playBeep(450, 0.05);
+
+      if (tabId === 'sumas') generateNewSumBoard();
+      if (tabId === 'memory_cards') initMemoryCards();
+    }
+
+    // --- EXPLORADOR ---
+    let activePieceType = 'knight';
+    let demoPiecePos = { r: 4, c: 3 };
+    let showDemoEnemies = true;
+    const demoEnemies = {
+      pawn: [{ r: 3, c: 2 }, { r: 3, c: 4 }],
+      knight: [{ r: 2, c: 2 }, { r: 2, c: 4 }, { r: 3, c: 3 }],
+      bishop: [{ r: 2, c: 1 }, { r: 6, c: 1 }],
+      rook: [{ r: 4, c: 6 }, { r: 1, c: 3 }],
+      queen: [{ r: 2, c: 1 }, { r: 4, c: 6 }, { r: 1, c: 3 }],
+      king: [{ r: 3, c: 2 }, { r: 3, c: 4 }]
+    };
+
+    function initExplorador() {
+      const container = document.getElementById('piece-selector');
+      container.innerHTML = '';
+      Object.keys(PIECES_DATA).forEach(type => {
+        const p = PIECES_DATA[type];
+        const btn = document.createElement('button');
+        btn.className = 'p-btn' + (type === activePieceType ? ' active' : '');
+        btn.innerHTML = '<span class="sym">' + p.symbol + '</span><span>' + p.name + '</span><span class="val">' + p.valText + '</span>';
+        btn.onclick = () => selectPiece(type);
+        container.appendChild(btn);
+      });
+      updatePieceInfo();
+      renderDemoBoard();
+    }
+
+    function selectPiece(type) {
+      activePieceType = type;
+      demoPiecePos = type === 'pawn' ? { r: 6, c: 3 } : { r: 4, c: 3 };
+      playBeep(400, 0.05);
+      initExplorador();
+    }
+
+    function updatePieceInfo() {
+      const p = PIECES_DATA[activePieceType];
+      document.getElementById('piece-info-box').innerHTML = '<strong>' + p.name + ' · Valor FIDE: ' + p.valText + '</strong>' + p.mnemonic;
+      const eqList = document.getElementById('equivalences-list');
+      eqList.innerHTML = p.equiv.map(e => '<li>' + e + '</li>').join('');
+      document.getElementById('special-rules-text').innerText = p.special;
+    }
+
+    function getValidMoves(type, pos, enemies) {
+      const moves = [];
+      const isInside = (r, c) => r >= 0 && r < 8 && c >= 0 && c < 8;
+      const hasEnemy = (r, c) => enemies.some(e => e.r === r && e.c === c);
+
+      if (type === 'knight') {
+        const deltas = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+        deltas.forEach(([dr, dc]) => {
+          const nr = pos.r + dr, nc = pos.c + dc;
+          if (isInside(nr, nc)) moves.push({ r: nr, c: nc, isCap: hasEnemy(nr, nc) });
+        });
+      } else if (type === 'rook' || type === 'bishop' || type === 'queen') {
+        const dirs = [];
+        if (type === 'rook' || type === 'queen') dirs.push([-1,0],[1,0],[0,-1],[0,1]);
+        if (type === 'bishop' || type === 'queen') dirs.push([-1,-1],[-1,1],[1,-1],[1,1]);
+        dirs.forEach(([dr, dc]) => {
+          let s = 1;
+          while(isInside(pos.r + dr*s, pos.c + dc*s)) {
+            const nr = pos.r + dr*s, nc = pos.c + dc*s;
+            if (hasEnemy(nr, nc)) { moves.push({ r: nr, c: nc, isCap: true }); break; }
+            moves.push({ r: nr, c: nc, isCap: false });
+            s++;
+          }
+        });
+      } else if (type === 'pawn') {
+        if (isInside(pos.r - 1, pos.c) && !hasEnemy(pos.r - 1, pos.c)) {
+          moves.push({ r: pos.r - 1, c: pos.c, isCap: false });
+          if (pos.r === 6 && !hasEnemy(pos.r - 2, pos.c)) moves.push({ r: pos.r - 2, c: pos.c, isCap: false });
+        }
+        [-1, 1].forEach(dc => {
+          if (isInside(pos.r - 1, pos.c + dc) && hasEnemy(pos.r - 1, pos.c + dc)) {
+            moves.push({ r: pos.r - 1, c: pos.c + dc, isCap: true });
+          }
+        });
+      } else if (type === 'king') {
+        for(let dr=-1; dr<=1; dr++) for(let dc=-1; dc<=1; dc++) {
+          if (!dr && !dc) continue;
+          const nr = pos.r + dr, nc = pos.c + dc;
+          if (isInside(nr, nc)) moves.push({ r: nr, c: nc, isCap: hasEnemy(nr, nc) });
+        }
+      }
+      return moves;
+    }
+
+    function renderDemoBoard() {
+      const board = document.getElementById('demo-board');
+      board.innerHTML = '';
+      const enemies = showDemoEnemies ? (demoEnemies[activePieceType] || []) : [];
+      const validMoves = getValidMoves(activePieceType, demoPiecePos, enemies);
+
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const sq = document.createElement('div');
+          sq.className = 'sq ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
+          const isPiece = demoPiecePos.r === r && demoPiecePos.c === c;
+          const isEnemy = enemies.some(e => e.r === r && e.c === c);
+          const move = validMoves.find(m => m.r === r && m.c === c);
+
+          if (isPiece) {
+            sq.innerText = PIECES_DATA[activePieceType].symbol;
+          } else if (isEnemy) {
+            sq.innerText = '♟';
+            sq.style.color = '#020617';
+          }
+
+          if (move) {
+            if (move.isCap) sq.classList.add('capture-hint');
+            else sq.classList.add('move-hint');
+          }
+
+          sq.onclick = () => {
+            if (move) {
+              demoPiecePos = { r, c };
+              playBeep(move.isCap ? 280 : 420, 0.08, move.isCap ? 'square' : 'triangle');
+              renderDemoBoard();
+            }
+          };
+          board.appendChild(sq);
+        }
+      }
+    }
+
+    function resetDemoPiece() { demoPiecePos = { r: 4, c: 3 }; renderDemoBoard(); playBeep(350, 0.05); }
+    function toggleDemoEnemies() {
+      showDemoEnemies = !showDemoEnemies;
+      document.getElementById('btn-enemies').innerText = showDemoEnemies ? 'Rivales: Sí' : 'Rivales: No';
+      renderDemoBoard();
+      playBeep(350, 0.05);
+    }
+
+    // --- SUMAS ---
+    let currentSumState = { pieces: [], wSum: 0, bSum: 0 };
+    let showSumHints = false;
+
+    function generateNewSumBoard() {
+      const board = document.getElementById('sums-board');
+      board.innerHTML = '';
+      document.getElementById('input-white-sum').value = '';
+      document.getElementById('input-black-sum').value = '';
+      const fb = document.getElementById('sums-feedback');
+      fb.className = 'feedback-banner';
+      fb.style.display = 'none';
+
+      const pool = ['pawn', 'pawn', 'knight', 'bishop', 'rook'];
+      const syms = { pawn: ['♙','♟'], knight: ['♘','♞'], bishop: ['♗','♝'], rook: ['♖','♜'], queen: ['♕','♛'] };
+      const pieces = [];
+      let wSum = 0, bSum = 0;
+      const count = Math.floor(Math.random() * 3) + 5;
+      const occ = new Set();
+
+      for (let i = 0; i < count; i++) {
+        let r, c, k;
+        do { r = Math.floor(Math.random()*8); c = Math.floor(Math.random()*8); k = r+','+c; } while (occ.has(k));
+        occ.add(k);
+        const type = pool[Math.floor(Math.random() * pool.length)];
+        const color = Math.random() > 0.5 ? 'white' : 'black';
+        const val = PIECES_DATA[type].val;
+        if (color === 'white') wSum += val; else bSum += val;
+        pieces.push({ r, c, type, color, char: syms[type][color === 'white' ? 0 : 1], val });
+      }
+
+      currentSumState = { pieces, wSum, bSum };
+
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const sq = document.createElement('div');
+          sq.className = 'sq ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
+          const p = pieces.find(x => x.r === r && x.c === c);
+          if (p) {
+            sq.innerText = p.char;
+            if (p.color === 'black') sq.style.color = '#020617';
+            if (showSumHints) {
+              const hint = document.createElement('span');
+              hint.style.cssText = 'position:absolute; bottom:2px; right:2px; font-size:10px; font-weight:bold; background:rgba(0,0,0,0.7); color:#f59e0b; padding:1px 3px; border-radius:4px;';
+              hint.innerText = p.val;
+              sq.appendChild(hint);
+            }
+          }
+          board.appendChild(sq);
+        }
+      }
+    }
+
+    function toggleSumHints() {
+      showSumHints = !showSumHints;
+      document.getElementById('btn-sum-hints').innerText = showSumHints ? 'Ocultar Pistas' : 'Ver Pistas (+)';
+      const board = document.getElementById('sums-board');
+      const squares = board.children;
+      let idx = 0;
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const sq = squares[idx++];
+          const p = currentSumState.pieces.find(x => x.r === r && x.c === c);
+          sq.innerHTML = p ? p.char : '';
+          if (p && showSumHints) {
+            const hint = document.createElement('span');
+            hint.style.cssText = 'position:absolute; bottom:2px; right:2px; font-size:10px; font-weight:bold; background:rgba(0,0,0,0.7); color:#f59e0b; padding:1px 3px; border-radius:4px;';
+            hint.innerText = p.val;
+            sq.appendChild(hint);
+          }
+        }
+      }
+    }
+
+    function checkBoardSum() {
+      const wVal = parseInt(document.getElementById('input-white-sum').value, 10);
+      const bVal = parseInt(document.getElementById('input-black-sum').value, 10);
+      const fb = document.getElementById('sums-feedback');
+
+      if (isNaN(wVal) || isNaN(bVal)) {
+        fb.className = 'feedback-banner error';
+        fb.innerText = 'Por favor, introduce los números de ambos bandos para comprobar.';
+        return;
+      }
+
+      const okW = wVal === currentSumState.wSum;
+      const okB = bVal === currentSumState.bSum;
+
+      if (okW && okB) {
+        fb.className = 'feedback-banner success';
+        fb.innerHTML = '✓ ¡Cálculo perfecto! Blancas = ' + wVal + ' pts · Negras = ' + bVal + ' pts.<br/>Diferencia: ' + (wVal === bVal ? 'Igualdad de material' : (wVal > bVal ? 'Ventaja blanca de +' + (wVal - bVal) : 'Ventaja negra de +' + (bVal - wVal)));
+        playBeep(580, 0.2, 'sine');
+      } else {
+        fb.className = 'feedback-banner error';
+        fb.innerHTML = 'Cálculo incorrecto. Las Blancas suman <strong>' + currentSumState.wSum + ' pts</strong> y las Negras <strong>' + currentSumState.bSum + ' pts</strong>.';
+        playBeep(220, 0.25, 'sawtooth');
+      }
+    }
+
+    // --- MEMORIA DE POSICIONES ---
+    let memoTargetPieces = [];
+    let memoUserPlaced = [];
+    let memoSelectedPiece = null;
+    let memoTimer = null;
+
+    function startMemoryPositionRound() {
+      memoUserPlaced = [];
+      memoSelectedPiece = null;
+      document.getElementById('memo-feedback').style.display = 'none';
+      document.getElementById('btn-check-memory').style.display = 'none';
+
+      const pool = ['pawn', 'knight', 'bishop', 'rook'];
+      const syms = { pawn: ['♙','♟'], knight: ['♘','♞'], bishop: ['♗','♝'], rook: ['♖','♜'] };
+      memoTargetPieces = [];
+      const occ = new Set();
+      for (let i = 0; i < 3; i++) {
+        let r, c, k;
+        do { r = Math.floor(Math.random()*8); c = Math.floor(Math.random()*8); k = r+','+c; } while (occ.has(k));
+        occ.add(k);
+        const type = pool[Math.floor(Math.random() * pool.length)];
+        const color = i % 2 === 0 ? 'white' : 'black';
+        memoTargetPieces.push({ id: i, r, c, type, color, char: syms[type][color==='white'?0:1] });
+      }
+
+      renderMemoBoard(true);
+      document.getElementById('btn-memo-ready').style.display = 'inline-block';
+      let sec = 5;
+      document.getElementById('memo-phase-status').innerHTML = '<strong style="color:var(--accent);">¡Memoriza las posiciones!</strong> Tienes <span id="memo-sec">' + sec + '</span> segundos...';
+
+      clearInterval(memoTimer);
+      memoTimer = setInterval(() => {
+        sec--;
+        const el = document.getElementById('memo-sec');
+        if (el) el.innerText = sec;
+        if (sec <= 0) {
+          clearInterval(memoTimer);
+          forceHideMemoryPieces();
+        }
+      }, 1000);
+    }
+
+    function forceHideMemoryPieces() {
+      clearInterval(memoTimer);
+      document.getElementById('btn-memo-ready').style.display = 'none';
+      document.getElementById('btn-check-memory').style.display = 'block';
+      document.getElementById('memo-phase-status').innerHTML = '<strong style="color:#38bdf8;">Fase de Reconstrucción:</strong> Haz clic en una pieza de abajo y luego en la casilla donde estaba.';
+      renderMemoBoard(false);
+      renderMemoTray();
+      playBeep(320, 0.08);
+    }
+
+    function renderMemoBoard(showTargets) {
+      const board = document.getElementById('memo-pos-board');
+      board.innerHTML = '';
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const sq = document.createElement('div');
+          sq.className = 'sq ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
+          const target = showTargets ? memoTargetPieces.find(p => p.r === r && p.c === c) : null;
+          const placed = !showTargets ? memoUserPlaced.find(p => p.r === r && p.c === c) : null;
+
+          if (target) {
+            sq.innerText = target.char;
+            if (target.color === 'black') sq.style.color = '#020617';
+          } else if (placed) {
+            sq.innerText = placed.char;
+            if (placed.color === 'black') sq.style.color = '#020617';
+          }
+
+          sq.onclick = () => {
+            if (!showTargets && memoSelectedPiece) {
+              memoUserPlaced = memoUserPlaced.filter(p => p.id !== memoSelectedPiece.id);
+              memoUserPlaced.push({ ...memoSelectedPiece, r, c });
+              memoSelectedPiece = null;
+              playBeep(440, 0.05);
+              renderMemoBoard(false);
+              renderMemoTray();
+            }
+          };
+          board.appendChild(sq);
+        }
+      }
+    }
+
+    function renderMemoTray() {
+      const tray = document.getElementById('memo-tray');
+      tray.innerHTML = '';
+      memoTargetPieces.forEach(p => {
+        const isPlaced = memoUserPlaced.some(u => u.id === p.id);
+        const b = document.createElement('button');
+        b.className = 'p-btn' + (memoSelectedPiece && memoSelectedPiece.id === p.id ? ' active' : '');
+        b.style.cssText = 'padding:6px 12px; font-size:18px; opacity:' + (isPlaced ? '0.4' : '1');
+        b.innerText = p.char;
+        b.onclick = () => {
+          if (!isPlaced) {
+            memoSelectedPiece = p;
+            playBeep(480, 0.04);
+            renderMemoTray();
+          }
+        };
+        tray.appendChild(b);
+      });
+    }
+
+    function checkMemoryPositions() {
+      let hits = 0;
+      const board = document.getElementById('memo-pos-board');
+      const squares = board.children;
+
+      memoTargetPieces.forEach(tgt => {
+        const placed = memoUserPlaced.find(u => u.id === tgt.id);
+        const isHit = placed && placed.r === tgt.r && placed.c === tgt.c;
+        if (isHit) hits++;
+        const targetSqIdx = tgt.r * 8 + tgt.c;
+        if (squares[targetSqIdx]) {
+          squares[targetSqIdx].classList.add(isHit ? 'correct-hint' : 'wrong-hint');
+          if (!isHit) squares[targetSqIdx].innerText = tgt.char;
+        }
+      });
+
+      const fb = document.getElementById('memo-feedback');
+      const pct = Math.round((hits / memoTargetPieces.length) * 100);
+      fb.className = 'feedback-banner ' + (pct >= 66 ? 'success' : 'error');
+      fb.innerText = 'Precisión de memoria: ' + pct + '% (' + hits + ' de ' + memoTargetPieces.length + ' posiciones correctas).';
+      fb.style.display = 'block';
+      playBeep(pct === 100 ? 600 : 250, 0.2);
+    }
+
+    // --- MEMORY DE CARTAS ---
+    const CARD_ITEMS = [
+      { sym: '♙', name: 'Peón (1 pt)' },
+      { sym: '♘', name: 'Caballo (3 pts)' },
+      { sym: '♗', name: 'Alfil (3 pts)' },
+      { sym: '♖', name: 'Torre (5 pts)' },
+      { sym: '♕', name: 'Dama (9 pts)' },
+      { sym: '♔', name: 'Rey (∞)' }
+    ];
+    let cardDeck = [], flippedCards = [], matchCount = 0;
+
+    function initMemoryCards() {
+      const grid = document.getElementById('memory-cards-grid');
+      grid.innerHTML = '';
+      flippedCards = []; matchCount = 0;
+      document.getElementById('card-feedback').style.display = 'none';
+
+      const pool = [...CARD_ITEMS, ...CARD_ITEMS].sort(() => Math.random() - 0.5);
+      cardDeck = pool.map((item, id) => ({ id, sym: item.sym, name: item.name, matched: false }));
+
+      cardDeck.forEach((card, idx) => {
+        const el = document.createElement('div');
+        el.className = 'memory-card';
+        el.innerText = '♟';
+        el.onclick = () => onCardClick(idx, el);
+        grid.appendChild(el);
+      });
+    }
+
+    function onCardClick(idx, el) {
+      if (flippedCards.length === 2 || el.classList.contains('revealed') || el.classList.contains('matched')) return;
+      el.classList.add('revealed');
+      el.innerHTML = '<span style="font-size:26px;">' + cardDeck[idx].sym + '</span><span style="font-size:10px; color:#f59e0b; font-weight:bold; margin-top:2px;">' + cardDeck[idx].name + '</span>';
+      flippedCards.push({ idx, el });
+      playBeep(480, 0.05);
+
+      if (flippedCards.length === 2) {
+        const [a, b] = flippedCards;
+        if (cardDeck[a.idx].sym === cardDeck[b.idx].sym) {
+          playBeep(650, 0.15);
+          setTimeout(() => {
+            a.el.classList.add('matched');
+            b.el.classList.add('matched');
+            flippedCards = [];
+            matchCount += 2;
+            if (matchCount === cardDeck.length) {
+              const fb = document.getElementById('card-feedback');
+              fb.className = 'feedback-banner success';
+              fb.innerText = '¡Magnífico! Has completado el juego de memoria de valores.';
+              fb.style.display = 'block';
+            }
+          }, 350);
+        } else {
+          setTimeout(() => {
+            a.el.classList.remove('revealed'); a.el.innerText = '♟';
+            b.el.classList.remove('revealed'); b.el.innerText = '♟';
+            flippedCards = [];
+          }, 900);
+        }
+      }
+    }
+
+    initExplorador();
+  </script>
+</body>
+</html>
